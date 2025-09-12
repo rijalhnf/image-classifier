@@ -1,6 +1,6 @@
 import io
 import torch
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image
@@ -16,12 +16,17 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://rij.al",
-        "https://www.rij.al"
+        "https://www.rij.al",
+        "http://localhost:3000"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.options("/classify")
+async def options_classify():
+    return Response(status_code=204)
 
 # Load pre-trained model
 def load_model():
