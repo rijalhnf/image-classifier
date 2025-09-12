@@ -14,7 +14,7 @@ app = FastAPI(title="Image Classifier API",
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://rij.al", "https://www.rij.al", "https://image-classifier-lipc.onrender.com"],  # React app's origin
+    allow_origins=["*"],  # React app's origin
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
