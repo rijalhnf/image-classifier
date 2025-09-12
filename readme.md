@@ -50,7 +50,9 @@ This application uses a pre-trained ResNet-18 model fine-tuned on ImageNet datas
 
 ## Quick command in terminal docker
 sudo docker stop image-classifier 2>/dev/null || true
-sudo docker rm image-classifier 2>/dev/null || true
-git pull
 sudo docker build -t image-classifier .
-sudo docker run -d --restart unless-stopped -p 8000:8000 --name image-classifier image-classifier
+sudo docker rm -f image-classifier 2>/dev/null || true
+sudo docker run -d --restart unless-stopped \
+  -p 8000:8000 \
+  -e TORCH_NUM_THREADS=2 -e OMP_NUM_THREADS=2 \
+  --name image-classifier image-classifier

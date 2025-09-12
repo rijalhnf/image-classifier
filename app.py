@@ -6,12 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image, UnidentifiedImageError
 import torchvision.transforms as transforms
-from torchvision.models import resnet18, ResNet18_Weights
+from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 import torch.nn.functional as F
 
 app = FastAPI(
     title="Image Classifier API",
-    description="An API for classifying images using a pre-trained ResNet model"
+    description="An API for classifying images using a pre-trained EfficientNet-B0 model"
 )
 
 ALLOWED_ORIGINS = [
@@ -29,6 +29,13 @@ ALLOWED_CONTENT_TYPES = {
 # Optional: cap upload size (bytes)
 MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", 10 * 1024 * 1024))  # 10 MB
 
+# Optional: limit CPU threads for stability on small devices
+try:
+    tn = int(os.getenv("TORCH_NUM_THREADS", "2"))
+    torch.set_num_threads(max(1, tn))
+except Exception:
+    pass
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -38,7 +45,8 @@ app.add_middleware(
 )
 
 def load_model():
-    model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+    weights = EfficientNet_B0_Weights.IMAGENET1K_V1
+    model = efficientnet_b0(weights=weights)
     model.eval()
     if torch.backends.mps.is_available():
         device = torch.device("mps")
@@ -51,22 +59,16 @@ def load_model():
     else:
         device = torch.device("cpu")
         print("Using CPU")
-    return model, device
+    return model, device, weights
 
-def load_imagenet_labels():
-    weights = ResNet18_Weights.IMAGENET1K_V1
-    return weights.meta["categories"]
+def load_imagenet_labels(w):
+    return w.meta["categories"]
 
-model, device = load_model()
-categories = load_imagenet_labels()
+model, device, weights = load_model()
+categories = load_imagenet_labels(weights)
 
-preprocess = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225]),
-])
+# Use the model’s recommended preprocessing
+preprocess = weights.transforms()
 
 @app.get("/")
 def health_check():
@@ -98,7 +100,7 @@ async def classify_image(file: UploadFile = File(...)):
         except UnidentifiedImageError:
             return JSONResponse(status_code=400, content={"error": "Invalid image file."})
 
-        # Validate actual format, not just header
+        # Validate actual format
         if img.format not in ("JPEG", "PNG"):
             return JSONResponse(
                 status_code=415,
@@ -129,7 +131,6 @@ async def classify_image(file: UploadFile = File(...)):
         })
 
     except Exception:
-        # Keep generic to avoid leaking internals
         return JSONResponse(status_code=500, content={"error": "Internal server error."})
 
 if __name__ == "__main__":
