@@ -12,21 +12,20 @@ app = FastAPI(title="Image Classifier API",
               description="An API for classifying images using a pre-trained ResNet model")
 
 # Add CORS middleware
+# Allowed FRONTEND origins only (do not include the API origin here)
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://rij.al",
+    "https://www.rij.al",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://rij.al",
-        "https://www.rij.al",
-        "http://localhost:3000"
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.options("/classify")
-async def options_classify():
-    return Response(status_code=204)
 
 # Load pre-trained model
 def load_model():
