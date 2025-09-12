@@ -47,3 +47,9 @@ uvicorn app:app --reload
 
 ## Model Information
 This application uses a pre-trained ResNet-18 model fine-tuned on ImageNet dataset, optimized for running on Apple Silicon using PyTorch's MPS device.
+
+## Quick command in terminal docker
+git pull
+sudo docker build -t image-classifier .
+sudo docker stop $(sudo docker ps -q --filter "ancestor=image-classifier") 2>/dev/null || true
+sudo docker run -d -p 8000:8000 --name image-classifier image-classifier
