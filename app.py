@@ -14,10 +14,13 @@ app = FastAPI(title="Image Classifier API",
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # React app's origin
+    allow_origins=[
+        "https://rij.al",
+        "https://www.rij.al"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Load pre-trained model
