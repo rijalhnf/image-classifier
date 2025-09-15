@@ -8,6 +8,8 @@ from PIL import Image, UnidentifiedImageError
 import torchvision.transforms as transforms
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 import torch.nn.functional as F
+from utils import get_hs_code
+from utils import search_hs_code
 
 app = FastAPI(
     title="Image Classifier API",
@@ -136,3 +138,62 @@ async def classify_image(file: UploadFile = File(...)):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+
+@app.post("/predict-hs")
+async def predict_hs(file: UploadFile = File(...)):
+    # Validate content type
+    if file.content_type and file.content_type.lower() not in ALLOWED_CONTENT_TYPES:
+        return JSONResponse(
+            status_code=415,
+            content={"error": "Unsupported media type. Allowed: JPEG, PNG."},
+        )
+    try:
+        data = await file.read()
+        if not data:
+            return JSONResponse(status_code=400, content={"error": "Empty file."})
+
+        if len(data) > MAX_UPLOAD_SIZE:
+            return JSONResponse(
+                status_code=413,
+                content={"error": f"File too large. Max {MAX_UPLOAD_SIZE // (1024*1024)} MB."},
+            )
+
+        # Open image and ensure RGB
+        try:
+            img = Image.open(io.BytesIO(data))
+        except UnidentifiedImageError:
+            return JSONResponse(status_code=400, content={"error": "Invalid image file."})
+
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+        tensor = preprocess(img).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            outputs = model(tensor)
+            probs = F.softmax(outputs, dim=1)
+
+        # Get top 3 predictions
+        top_probs, top_idxs = torch.topk(probs, 3, dim=1)
+        top_probs = top_probs.squeeze(0).cpu().tolist()
+        top_idxs = top_idxs.squeeze(0).cpu().tolist()
+
+        results = []
+        for idx, prob in zip(top_idxs, top_probs):
+            label = categories[idx]
+            hs_matches = search_hs_code(label, limit=3)
+            for hs in hs_matches:
+                results.append({
+                    "predicted_label": label,
+                    "hs_code": hs["hs_code"],
+                    "hs_description": hs["hs_description"],
+                    "probability": float(prob),
+                    "match_score": hs["match_score"]
+                })
+
+        return JSONResponse(status_code=200, content={
+            "filename": file.filename,
+            "predictions": results
+        })
+
+    except Exception:
+        return JSONResponse(status_code=500, content={"error": "Internal server error."})
