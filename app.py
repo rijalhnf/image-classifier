@@ -141,7 +141,6 @@ if __name__ == "__main__":
 
 @app.post("/predict-hs")
 async def predict_hs(file: UploadFile = File(...)):
-    # Validate content type
     if file.content_type and file.content_type.lower() not in ALLOWED_CONTENT_TYPES:
         return JSONResponse(
             status_code=415,
@@ -158,7 +157,6 @@ async def predict_hs(file: UploadFile = File(...)):
                 content={"error": f"File too large. Max {MAX_UPLOAD_SIZE // (1024*1024)} MB."},
             )
 
-        # Open image and ensure RGB
         try:
             img = Image.open(io.BytesIO(data))
         except UnidentifiedImageError:
@@ -172,7 +170,6 @@ async def predict_hs(file: UploadFile = File(...)):
             outputs = model(tensor)
             probs = F.softmax(outputs, dim=1)
 
-        # Get top 3 predictions
         top_probs, top_idxs = torch.topk(probs, 3, dim=1)
         top_probs = top_probs.squeeze(0).cpu().tolist()
         top_idxs = top_idxs.squeeze(0).cpu().tolist()
@@ -181,14 +178,19 @@ async def predict_hs(file: UploadFile = File(...)):
         for idx, prob in zip(top_idxs, top_probs):
             label = categories[idx]
             hs_matches = search_hs_code(label, limit=3)
-            for hs in hs_matches:
-                results.append({
-                    "predicted_label": label,
+            hs_list = [
+                {
                     "hs_code": hs["hs_code"],
                     "hs_description": hs["hs_description"],
-                    "probability": float(prob),
                     "match_score": hs["match_score"]
-                })
+                }
+                for hs in hs_matches
+            ]
+            results.append({
+                "predicted_label": label,
+                "hs": hs_list,
+                "probability": float(prob)
+            })
 
         return JSONResponse(status_code=200, content={
             "filename": file.filename,

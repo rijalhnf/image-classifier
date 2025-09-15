@@ -3,6 +3,10 @@
 ## Overview
 This application uses deep learning to classify images into predefined categories and can also suggest HS codes for products based on images. It leverages PyTorch for model inference and exposes the functionality through a FastAPI web service that allows users to upload and classify images, as well as predict HS codes.
 
+## Datasets Used
+- **Image Classification:** EfficientNet-B0 pre-trained on ImageNet.
+- **HS Code Mapping:** [ronnieaban/hs-code](https://huggingface.co/datasets/ronnieaban/hs-code) dataset for HS code descriptions and matching.
+
 ## Features
 - Upload images through a REST API endpoint
 - Real-time image classification using EfficientNet-B0 (pre-trained on ImageNet)
