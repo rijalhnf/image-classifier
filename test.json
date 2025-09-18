@@ -1,0 +1,16 @@
+{
+  "filename": "image.png",
+  "predictions": [
+    {
+      "predicted_label": "sweatshirt",
+      "hs": [
+        {"hs_code": "6106", "hs_description": "Blouses, shirts and shirt-blouses; women's or girls', knitted or crocheted", "match_score": 63.0},
+        {"hs_code": "6206", "hs_description": "Blouses, shirts and shirt-blouses; women's or girls' (not knitted or crocheted)", "match_score": 63.0}
+      ],
+      "probability": 0.98
+    }
+  ]
+}
+
+
+

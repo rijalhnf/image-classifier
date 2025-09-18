@@ -1,3 +1,12 @@
+
+# --- Imports ---
+# torch: Deep learning library for model inference
+# torchvision: Image transforms for preprocessing
+# PIL: Image loading and manipulation
+# requests: Download files/images from the web
+# BytesIO: Handle image bytes in memory
+# json, csv: Data file handling
+# rapidfuzz: Fast fuzzy string matching for HS code search
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
@@ -7,17 +16,30 @@ import json
 import csv
 from rapidfuzz import process, fuzz
 
-HS_DATASET_PATH = "hs_code_dataset.csv"  # Make sure this file exists in your project root
 
-# Load ImageNet class labels
+# --- Global Variables ---
+HS_DATASET_PATH = "hs_code_dataset.csv"  # Path to HS code dataset (CSV file)
+
+
+# --- ImageNet Class Labels ---
 def load_imagenet_labels():
+    """
+    Downloads and returns the list of ImageNet class labels.
+    Used to map model predictions to human-readable categories.
+    """
     labels_url = "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"
     response = requests.get(labels_url)
     categories = response.text.splitlines()
     return categories
 
-# Prepare image for model input
+
+# --- Image Preprocessing ---
 def preprocess_image(image_path=None, image_url=None):
+    """
+    Loads and preprocesses an image for model input.
+    Accepts either a local file path or a URL.
+    Returns a PyTorch tensor ready for EfficientNet/ImageNet models.
+    """
     if image_path:
         img = Image.open(image_path)
     elif image_url:
@@ -25,7 +47,6 @@ def preprocess_image(image_path=None, image_url=None):
         img = Image.open(BytesIO(response.content))
     else:
         raise ValueError("Either image_path or image_url must be provided")
-    
     # Standard transforms for pre-trained models
     preprocess = transforms.Compose([
         transforms.Resize(256),
@@ -33,20 +54,24 @@ def preprocess_image(image_path=None, image_url=None):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-    
     return preprocess(img).unsqueeze(0)  # Add batch dimension
 
-# Get device optimized for M1
+
+# --- Device Selection ---
 def get_device():
+    """
+    Returns the best available device for PyTorch (Apple M1, CUDA GPU, or CPU).
+    """
     if torch.backends.mps.is_available():
         return torch.device("mps")
     elif torch.cuda.is_available():
         return torch.device("cuda")
     else:
         return torch.device("cpu")
-    
-    # Simple mapping for demo purposes
+
+# --- ImageNet to HS Code Mapping (Demo) ---
 IMAGENET_TO_HS = {
+    # Maps common ImageNet labels to example HS codes and descriptions
     "smartphone": ("851713", "Smartphones"),
     "cellular telephone": ("851714", "Other telephones for cellular networks"),
     "cordless phone": ("851711", "Line telephone sets with cordless handsets"),
@@ -56,15 +81,25 @@ IMAGENET_TO_HS = {
     # Add more mappings as needed
 }
 
+
 def get_hs_code(imagenet_label: str):
-    # Lowercase and match
+    """
+    Maps an ImageNet label to a demo HS code and description.
+    Returns (HS code, description) tuple, or ('000000', 'Unknown...') if not found.
+    """
     for key in IMAGENET_TO_HS:
         if key in imagenet_label.lower():
             return IMAGENET_TO_HS[key]
     return ("000000", "Unknown or unmapped product")
 
-# Load HS code dataset into memory
+
+# --- HS Code Dataset Loader ---
 def load_hs_dataset():
+    """
+    Loads HS code dataset from CSV file into memory.
+    Each row should have a 'text' column: 'HS_CODE - Description'.
+    Returns a list of dicts: {hs_code, hs_description}
+    """
     hs_rows = []
     with open(HS_DATASET_PATH, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
@@ -81,9 +116,16 @@ def load_hs_dataset():
             })
     return hs_rows
 
+# Load dataset once at import for fast access
 HS_DATASET = load_hs_dataset()
 
+
+# --- Fuzzy Search for HS Codes ---
 def search_hs_code(label, limit=3):
+    """
+    Finds the closest HS code descriptions to a given label using fuzzy matching.
+    Returns a list of top matches with HS code, description, and match score.
+    """
     results = process.extract(
         label,
         [row["hs_description"] for row in HS_DATASET],
