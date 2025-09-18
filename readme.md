@@ -42,6 +42,7 @@ This application uses deep learning to classify images into predefined categorie
 ### Running the Application (Local)
 1. Start the FastAPI server:
     ```bash
+    conda activate ai (if not active, the "ai" is name of environment)
     uvicorn app:app --reload
     ```
 2. Access the API documentation at [http://localhost:8000/docs](http://localhost:8000/docs)
