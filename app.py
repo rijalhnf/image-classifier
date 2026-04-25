@@ -33,7 +33,7 @@ app = FastAPI(
 # --- CORS Settings ---
 # Allow requests from these frontend origins (for browser apps)
 ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "http://localhost:5173",
     "https://rij.al",
     "https://www.rij.al",
 ]
